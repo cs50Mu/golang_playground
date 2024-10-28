@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"strings"
+
+	perr "github.com/pkg/errors"
 )
 
 type Base64 struct {
@@ -81,7 +83,7 @@ func (b6 *Base64) Encode(input []byte) string {
 func (b6 *Base64) indexOf(c byte) (uint8, error) {
 	idx := bytes.IndexByte(b6.Table[:], c)
 	if idx == -1 {
-		return 0, ErrMalformedBase64
+		return 0, perr.Wrapf(ErrMalformedBase64, "byte: %X", c)
 	}
 	return uint8(idx), nil
 }
@@ -91,64 +93,47 @@ var (
 )
 
 // A base64 decoder usually works on a window of 4 bytes.
-func (b6 *Base64) Decode(s string) ([]byte, error) {
+func (bs *Base64) Decode(s string) ([]byte, error) {
 	s = strings.TrimSuffix(s, "=") // remove trailing '='
 	var buffer bytes.Buffer
 	for {
 		if len(s) <= 1 {
 			break
 		}
-		if len(s) == 2 {
-			b1, err := b6.indexOf(s[0])
+		var b1, b2, b3, b4 uint8
+		var err error
+		if len(s) >= 2 {
+			b1, err = bs.indexOf(s[0])
 			if err != nil {
 				return nil, err
 			}
-			b2, err := b6.indexOf(s[1])
+			b2, err = bs.indexOf(s[1])
 			if err != nil {
 				return nil, err
 			}
 			buffer.WriteByte((b1 << 2) | b2>>4)
-			break
-		} else if len(s) == 3 {
-			b1, err := b6.indexOf(s[0])
-			if err != nil {
-				return nil, err
+			if len(s) == 2 {
+				break
 			}
-			b2, err := b6.indexOf(s[1])
-			if err != nil {
-				return nil, err
-			}
+		}
+		if len(s) >= 3 {
 			b2Low4 := b2 & 0xf
-			buffer.WriteByte((b1 << 2) | b2>>4)
-			b3, err := b6.indexOf(s[2])
+			b3, err = bs.indexOf(s[2])
 			if err != nil {
 				return nil, err
 			}
 			buffer.WriteByte((b2Low4 << 4) | b3>>2)
-			break
+			if len(s) == 3 {
+				break
+			}
 		}
 
 		// len(s) >= 4
-		b1, err := b6.indexOf(s[0])
-		if err != nil {
-			return nil, err
-		}
-		b2, err := b6.indexOf(s[1])
-		if err != nil {
-			return nil, err
-		}
-		b2Low4 := b2 & 0xf
-		buffer.WriteByte((b1 << 2) | b2>>4)
-		b3, err := b6.indexOf(s[2])
-		if err != nil {
-			return nil, err
-		}
-		b4, err := b6.indexOf(s[3])
+		b4, err = bs.indexOf(s[3])
 		if err != nil {
 			return nil, err
 		}
 		b3Low2 := b3 & 0x3
-		buffer.WriteByte((b2Low4 << 4) | b3>>2)
 		buffer.WriteByte((b3Low2 << 6) | b4)
 
 		s = s[4:]
