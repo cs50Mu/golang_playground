@@ -82,3 +82,83 @@ func (pq *MaxPQ) swap(i, j int) {
 	pq.pq[i] = pq.pq[j]
 	pq.pq[j] = tmp
 }
+
+// Heap generic heap impl
+// ref: https://go.dev/play/p/4tP6OVcKrma
+// https://www.reddit.com/r/golang/comments/188it98/why_are_go_heaps_so_complicated/
+type Heap[E any] struct {
+	arr  []E
+	size int
+	// 传入 i < j 为小顶堆
+	// 传入 i > j 为大顶堆
+	less func(E, E) bool
+}
+
+func NewHeap[E any](less func(E, E) bool) *Heap[E] {
+	return &Heap[E]{
+		less: less,
+	}
+}
+
+// func NewHeapWithSlice(arr []int) *Heap {
+// 	return &Heap{
+// 		arr:  arr,
+// 		size: len(arr),
+// 	}
+// }
+
+// Push add new element to `Heap`
+// and rebuild the Heap
+func (h *Heap[E]) Push(x E) {
+	h.arr = append(h.arr, x)
+	h.heapInsert(h.size)
+	h.size++
+}
+
+// heapInsert i 位置的元素向上调整
+func (h *Heap[E]) heapInsert(i int) {
+	// 无需判断size，当到达 root 节点时，
+	// arr[i] > arr[(i-1)/2] 的条件自然就不满足了
+	for h.less(h.arr[i], h.arr[(i-1)/2]) {
+		// swap
+		h.arr[i], h.arr[(i-1)/2] = h.arr[(i-1)/2], h.arr[i]
+		i = (i - 1) / 2
+	}
+}
+
+// heapify i 位置的元素向下调整
+func (h *Heap[E]) heapify(i int, size int) {
+	left := 2*i + 1 // 左节点索引
+	for left < size {
+		var best int                                             // 找出“更好”的节点，来判断是否需要 swap
+		if left+1 < size && h.less(h.arr[left+1], h.arr[left]) { // 若有右节点且右节点“更好”
+			best = left + 1
+		} else {
+			best = left
+		}
+
+		// 需要 swap
+		if h.less(h.arr[best], h.arr[i]) {
+			h.arr[best], h.arr[i] = h.arr[i], h.arr[best]
+		} else {
+			break // 无需 swap 时，需要立即退出
+		}
+
+		// 继续往下走
+		i = best // 注意要更新 i 的值！
+		left = 2*i + 1
+	}
+}
+
+// Pop remove the top element from `Heap`
+// and rebuild the Heap
+func (h *Heap[E]) Pop() E {
+	res := h.arr[0]
+	h.size--
+	h.arr[0], h.arr[h.size] = h.arr[h.size], h.arr[0] // swap
+	h.arr = h.arr[:h.size]                            // shrink the arr
+
+	h.heapify(0, h.size)
+
+	return res
+}

@@ -27,8 +27,12 @@ func reverseStr(s string) (string, error) {
 		return "", ErrMaxLenExceed
 	}
 
-	for i := 0; i < len(s)/2; i++ {
-		chars[i], chars[len(s)-i-1] = chars[len(s)-i-1], chars[i]
+	i := 0
+	j := len(s) - 1
+	for i < j {
+		chars[i], chars[j] = chars[j], chars[i]
+		i++
+		j--
 	}
 
 	return string(chars), nil

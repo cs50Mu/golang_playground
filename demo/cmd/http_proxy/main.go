@@ -39,6 +39,7 @@ import (
 // 改为自己实现 http handler 就没问题了
 
 // 参考：https://eli.thegreenplace.net/2022/go-and-proxy-servers-part-2-https-proxies/
+// https://koalr.me/posts/passive-scan-via-http-proxy/
 
 type ProxyHttpServer struct {
 	caCert *x509.Certificate

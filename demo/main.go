@@ -1,19 +1,18 @@
 package main
 
-import (
-	"fmt"
-	"sync"
-)
+import "time"
 
 func main() {
-	var wg sync.WaitGroup
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			fmt.Println(i)
-		}(i)
+	serverDone := make(chan struct{})
+	var ticker = time.NewTicker(1 * time.Millisecond)
+	defer ticker.Stop()
+	var counter = 0
+	for {
+		select {
+		case <-serverDone:
+			return
+		case <-ticker.C:
+			counter += 1
+		}
 	}
-
-	wg.Wait()
 }

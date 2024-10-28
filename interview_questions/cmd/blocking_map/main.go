@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -31,6 +32,7 @@ func main() {
 type BlockingMap struct {
 	m      map[string]chan struct{}
 	innerM map[string]interface{}
+	mu     sync.Mutex
 }
 
 func NewBlockingMap() *BlockingMap {
@@ -47,11 +49,13 @@ func (bm *BlockingMap) Read(key string, timeout time.Duration) interface{} {
 	}
 
 	var ch chan struct{}
+	bm.mu.Lock()
 	ch, ok := bm.m[key]
 	if !ok {
 		ch = make(chan struct{})
 		bm.m[key] = ch
 	}
+	bm.mu.Unlock()
 	timer := time.After(timeout)
 	select {
 	case <-ch:
@@ -65,12 +69,14 @@ func (bm *BlockingMap) Read(key string, timeout time.Duration) interface{} {
 
 // Write ...
 func (bm *BlockingMap) Write(key string, val interface{}) {
+	bm.mu.Lock()
 	var ch chan struct{}
 	ch, ok := bm.m[key]
 	if !ok {
 		ch = make(chan struct{})
 		bm.m[key] = ch
 	}
+	bm.mu.Unlock()
 	bm.innerM[key] = val
 	go func() {
 		ch <- struct{}{}
